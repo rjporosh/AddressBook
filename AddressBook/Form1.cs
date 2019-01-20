@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml;
 
 namespace AddressBook
 {
@@ -16,9 +18,10 @@ namespace AddressBook
         {
             InitializeComponent();
             PersonPic.AllowDrop = true;
-            this.BackColor = Color.Black;
-            this.TransparencyKey = Color.Black;
+            //this.BackColor = Color.Black;
+            //this.TransparencyKey = Color.Black;
         }
+        List<Person> people = new List<Person>();
 
         private void PersonPic_Click(object sender, EventArgs e)
         {
@@ -34,19 +37,53 @@ namespace AddressBook
 
         private void btnSaveChanges_Click(object sender, EventArgs e)
         {
-            MaterialTabController m = new MaterialTabController();
-            this.Hide();
-            m.Show();
+            //MaterialTabController m = new MaterialTabController();
+            //this.Hide();
+            //m.Show();
+            people[listPeople.SelectedItems[0].Index].Name = txtName.Text;
+            people[listPeople.SelectedItems[0].Index].Phone = txtPhone.Text;
+            people[listPeople.SelectedItems[0].Index].Email = txtEmail.Text;
+            people[listPeople.SelectedItems[0].Index].Street = txtStreet.Text;
+            people[listPeople.SelectedItems[0].Index].DateOfBirth = txtDob.Value;
+            people[listPeople.SelectedItems[0].Index].AdditionalInfo = txtAdditionalNotes.Text;
+            people[listPeople.SelectedItems[0].Index].Picture = PersonPic.ImageLocation;
+            listPeople.SelectedItems[0].Text = txtName.Text;
+            clear();
         }
 
         private void btnAddContact_Click(object sender, EventArgs e)
         {
+            Person p = new Person();
+            p.Name = txtName.Text.Trim();
+            p.Phone = txtPhone.Text.Trim();
+            p.Email = txtEmail.Text.Trim();
+            p.Street = txtStreet.Text.Trim();
+            p.DateOfBirth = txtDob.Value;
+            p.AdditionalInfo = txtAdditionalNotes.Text.Trim();
+            p.Picture = PersonPic.ImageLocation;
+            people.Add(p);
+            listPeople.Items.Add(p.Name);
+            clear();
+        }
 
+        private void clear()
+        {
+            txtName.Text = "";
+            txtAdditionalNotes.Text = "";
+            txtPhone.Text = "";
+            txtDob.Value = DateTime.Now;
+            txtEmail.Text = "";
+            txtStreet.Text = "";
+            PersonPic.Image = AddressBook.Properties.Resources.images;
+            btnSaveChanges.Enabled = false;
+            btnRemove.Enabled = false;
+            btnAddContact.Enabled = true;
         }
 
         private void btnRemove_Click(object sender, EventArgs e)
         {
-
+           Remove();
+           clear();
         }
 
         private void PersonPic_DragDrop(object sender, DragEventArgs e)
@@ -65,15 +102,6 @@ namespace AddressBook
             e.Effect = DragDropEffects.Copy;
         }
 
-        private void removePeopleToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void editToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-        }
         public static Timer t;
 
         public void T_Tick(object sender, EventArgs e)
@@ -110,6 +138,130 @@ namespace AddressBook
         {
             this.Show();
         }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            if (!Directory.Exists(path + "\\AddressBook - Porosh"))
+            {
+                Directory.CreateDirectory(path + "\\AddressBook - Porosh");
+            }
+
+            if (!File.Exists(path + "\\AddressBook - Porosh\\settings.xml"))
+            {
+               // File.Create(path + "\\AddressBook - Porosh\\settings.xml");
+                XmlTextWriter xW =new XmlTextWriter(path + "\\AddressBook - Porosh\\settings.xml",Encoding.UTF8);
+                xW.WriteStartElement("People");
+                xW.WriteEndElement();
+                xW.Close();
+            }
+            XmlDocument xDoc =new XmlDocument();
+            foreach (XmlNode xNode in xDoc.SelectNodes("People/Person"))
+            {
+                Person p = new Person();
+                p.Name = xNode.SelectSingleNode("Name").InnerText;
+                p.Email = xNode.SelectSingleNode("Email").InnerText;
+                p.Phone = xNode.SelectSingleNode("Phone").InnerText;
+                p.Street = xNode.SelectSingleNode("Street").InnerText;
+                p.DateOfBirth = DateTime.FromFileTime(Convert.ToInt64(xNode.SelectSingleNode("DateOfBirth").InnerText));
+                p.AdditionalInfo = xNode.SelectSingleNode("AdditionalInfo").InnerText;
+                p.Picture = xNode.SelectSingleNode("PersonPic").InnerText;
+                people.Add(p);
+                listPeople.Items.Add(p.Name);
+            }
+
+            btnSaveChanges.Enabled = false;
+            btnRemove.Enabled = false;
+        }
+
+        void Remove()
+        {
+            try
+            {
+                if (listPeople.SelectedItems.Count <= 0)
+                    return;
+                listPeople.Items.Remove(listPeople.SelectedItems[0]);
+                people.RemoveAt(listPeople.SelectedItems[0].Index);
+                clear();
+            }
+            catch (Exception e)
+            {
+               
+            }
+        }
+        private void listPeople_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            edit();
+        }
+
+        void edit()
+        {
+            if (listPeople.SelectedItems.Count <= 0)
+                return;
+            txtName.Text = people[listPeople.SelectedItems[0].Index].Name;
+            txtPhone.Text = people[listPeople.SelectedItems[0].Index].Phone;
+            txtEmail.Text = people[listPeople.SelectedItems[0].Index].Email;
+            txtStreet.Text = people[listPeople.SelectedItems[0].Index].Street;
+            txtDob.Value = people[listPeople.SelectedItems[0].Index].DateOfBirth;
+            txtAdditionalNotes.Text = people[listPeople.SelectedItems[0].Index].AdditionalInfo;
+            PersonPic.ImageLocation = people[listPeople.SelectedItems[0].Index].Picture;
+            btnAddContact.Enabled = false;
+            btnSaveChanges.Enabled = true;
+            btnRemove.Enabled = true;
+        }
+
+        private void btnClear_Click(object sender, EventArgs e)
+        {
+            clear();
+        }
+
+        private void removeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Remove();
+            clear();
+        }
+
+        private void editToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            edit();
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            XmlDocument xDoc = new XmlDocument();
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            xDoc.Load(path + "\\AddressBook - Porosh\\settings.xml");
+            XmlNode xNode = xDoc.CreateNode("People","Person","Name");
+            xDoc.SelectSingleNode("People");
+            xNode.RemoveAll();
+            foreach (Person p in people)
+            {
+                XmlNode xTop = xDoc.CreateElement("Person");
+                XmlNode xName = xDoc.CreateElement("Name");
+                XmlNode xPhone = xDoc.CreateElement("Phone");
+                XmlNode xEmail = xDoc.CreateElement("Email");
+                XmlNode xStreet = xDoc.CreateElement("Street");
+                XmlNode xDob = xDoc.CreateElement("DateOfBirth");
+                XmlNode xAdditionalInfo = xDoc.CreateElement("AdditionalInfo");
+                XmlNode xPic = xDoc.CreateElement("PersonPic");
+                xName.InnerText = p.Name;
+                xPhone.InnerText = p.Phone;
+                xEmail.InnerText = p.Email;
+                xStreet.InnerText = p.Street;
+                xDob.InnerText = p.DateOfBirth.ToFileTime().ToString();
+                xAdditionalInfo.InnerText = p.AdditionalInfo;
+                xPic.InnerText = p.Picture;
+                xTop.AppendChild(xName);
+                xTop.AppendChild(xPhone);
+                xTop.AppendChild(xEmail);
+                xTop.AppendChild(xStreet);
+                xTop.AppendChild(xDob);
+                xTop.AppendChild(xPic);
+                xTop.AppendChild(xAdditionalInfo);
+                xDoc.DocumentElement.AppendChild(xTop);
+            }
+            xDoc.Save(path + "\\AddressBook - Porosh\\settings.xml");
+        }
     }
         //private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         //{
@@ -141,4 +293,5 @@ namespace AddressBook
         public string Street { get; set; }
         public string AdditionalInfo { get; set; }
         public DateTime DateOfBirth { get; set; }
+        public string Picture { get; set; }
     }
