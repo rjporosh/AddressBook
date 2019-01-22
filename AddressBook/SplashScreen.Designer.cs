@@ -2,6 +2,7 @@
 {
     partial class SplashScreen
     {
+		//Comment added by prince for test only.
         /// <summary>
         /// Required designer variable.
         /// </summary>
